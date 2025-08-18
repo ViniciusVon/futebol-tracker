@@ -1,16 +1,18 @@
-import BackButton from '@/components/BackButton';
 import { api } from '@/services/api';
 import {
   Card,
+  Icon,
   Layout,
   Spinner,
   Tab,
   TabView,
   Text,
+  TopNavigation,
+  TopNavigationAction,
 } from '@ui-kitten/components';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet } from 'react-native';
+import { Image, SafeAreaView, StyleSheet } from 'react-native';
 
 interface TeamDetail {
   team: {
@@ -33,6 +35,7 @@ interface TeamDetail {
 }
 
 export default function TeamsDetail() {
+  const router = useRouter();
   const { id } = useLocalSearchParams();
   const [teamDetail, setTeamDetail] = useState<TeamDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +53,13 @@ export default function TeamsDetail() {
       }
     })();
   }, [id]);
+
+  const renderBackAction = () => (
+    <TopNavigationAction
+      icon={(props) => <Icon {...props} name="arrow-back" />}
+      onPress={() => router.back()}
+    />
+  );
 
   if (loading) {
     return (
@@ -72,79 +82,85 @@ export default function TeamsDetail() {
   const { team, venue } = teamDetail;
 
   return (
-    <Layout style={styles.container}>
-      <BackButton />
+    <SafeAreaView style={{ flex: 1}}>
+      <Layout style={{ flex: 1 }}>
+        <TopNavigation
+          title="Detalhes do Time"
+          alignment="center"
+          accessoryLeft={renderBackAction}
+        />
 
-      <TabView
-        selectedIndex={selectedIndex}
-        onSelect={(index) => setSelectedIndex(index)}
-        style={{ flex: 1 }}
-      >
-        <Tab title="Time">
-          <Layout style={styles.tabContent}>
-            <Card style={styles.card} status="basic">
-              <Image source={{ uri: team.logo }} style={styles.logo} />
-              <Text category="h5" style={styles.name}>
-                {team.name}
-              </Text>
-
-              <Layout style={styles.infoRow}>
-                <Text category="s1" appearance="hint">
-                  País:
+        <TabView
+          selectedIndex={selectedIndex}
+          onSelect={(index) => setSelectedIndex(index)}
+          style={{ flex: 1 }}
+        >
+          <Tab title="Time">
+            <Layout style={styles.tabContent}>
+              <Card style={styles.card} status="basic">
+                <Image source={{ uri: team.logo }} style={styles.logo} />
+                <Text category="h5" style={styles.name}>
+                  {team.name}
                 </Text>
-                <Text category="s1">{team.country}</Text>
-              </Layout>
 
-              <Layout style={styles.infoRow}>
-                <Text category="s1" appearance="hint">
-                  Fundado:
-                </Text>
-                <Text category="s1">{team.founded ?? '---'}</Text>
-              </Layout>
+                <Layout style={styles.infoRow}>
+                  <Text category="s1" appearance="hint">
+                    País:
+                  </Text>
+                  <Text category="s1">{team.country}</Text>
+                </Layout>
 
-              <Layout style={styles.infoRow}>
-                <Text category="s1" appearance="hint">
-                  Tipo:
-                </Text>
-                <Text category="s1">
-                  {team.national ? 'Seleção Nacional' : 'Clube'}
-                </Text>
-              </Layout>
-            </Card>
-          </Layout>
-        </Tab>
+                <Layout style={styles.infoRow}>
+                  <Text category="s1" appearance="hint">
+                    Fundado:
+                  </Text>
+                  <Text category="s1">{team.founded ?? '---'}</Text>
+                </Layout>
 
-        <Tab title="Estádio">
-          <Layout style={styles.tabContent}>
-            <Card style={styles.card} status="basic">
-              <Text category="h6" style={{ marginBottom: 12 }}>
-                Estádio
-              </Text>
-              <Image source={{ uri: venue.image }} style={styles.venueImage} />
-              <Text category="s1" style={{ fontWeight: '600' }}>
-                {venue.name}
-              </Text>
-              <Text appearance="hint">{venue.address}</Text>
-              <Text appearance="hint">{venue.city}</Text>
+                <Layout style={styles.infoRow}>
+                  <Text category="s1" appearance="hint">
+                    Tipo:
+                  </Text>
+                  <Text category="s1">
+                    {team.national ? 'Seleção Nacional' : 'Clube'}
+                  </Text>
+                </Layout>
+              </Card>
+            </Layout>
+          </Tab>
 
-              <Layout style={styles.infoRow}>
-                <Text category="s1" appearance="hint">
-                  Capacidade:
+          <Tab title="Estádio">
+            <Layout style={styles.tabContent}>
+              <Card style={styles.card} status="basic">
+                <Text category="h6" style={{ marginBottom: 12 }}>
+                  Estádio
                 </Text>
-                <Text category="s1">{venue.capacity.toLocaleString()}</Text>
-              </Layout>
+                <Image source={{ uri: venue.image }} style={styles.venueImage} />
+                <Text category="s1" style={{ fontWeight: '600' }}>
+                  {venue.name}
+                </Text>
+                <Text appearance="hint">{venue.address}</Text>
+                <Text appearance="hint">{venue.city}</Text>
 
-              <Layout style={styles.infoRow}>
-                <Text category="s1" appearance="hint">
-                  Superfície:
-                </Text>
-                <Text category="s1">{venue.surface}</Text>
-              </Layout>
-            </Card>
-          </Layout>
-        </Tab>
-      </TabView>
-    </Layout>
+                <Layout style={styles.infoRow}>
+                  <Text category="s1" appearance="hint">
+                    Capacidade:
+                  </Text>
+                  <Text category="s1">{venue.capacity.toLocaleString()}</Text>
+                </Layout>
+
+                <Layout style={styles.infoRow}>
+                  <Text category="s1" appearance="hint">
+                    Superfície:
+                  </Text>
+                  <Text category="s1">{venue.surface}</Text>
+                </Layout>
+              </Card>
+            </Layout>
+          </Tab>
+        </TabView>
+      </Layout>
+    </SafeAreaView>
   );
 }
 
@@ -152,7 +168,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
-    paddingTop: 40,
   },
   center: {
     justifyContent: 'center',
