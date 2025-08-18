@@ -13,9 +13,16 @@ const options = [
   },
   {
     key: 'team',
-    title: 'Ver Time do Palmeiras',
+    title: 'Ver Time do Barcelona',
     subtitle: 'Perfil do Time',
-    route: '/teams/121',
+    route: '/teams/529',
+    icon: 'people',
+  },
+  {
+    key: 'season',
+    title: 'Ver Temporada do Barcelona',
+    subtitle: 'Temporadas do Time',
+    route: '/seasons/529',
     icon: 'people',
   },
 ];
