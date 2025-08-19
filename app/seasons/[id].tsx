@@ -38,7 +38,7 @@ export default function TeamSeason() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [season, setSeason] = useState<number>(2021);
-  const [seasonIndex, setSeasonIndex] = useState<IndexPath | undefined>(undefined);
+  const [seasonIndex, setSeasonIndex] = useState<IndexPath | null>(null);
   const seasons = [2021, 2022, 2023];
   const [flagSelected, setFlagSelected] = useState(false);
 
@@ -82,7 +82,7 @@ export default function TeamSeason() {
 
     return (
       <TouchableOpacity
-        activeOpacity={0.7} // efeito de clique
+        activeOpacity={0.7}
         style={styles.card}
         onPress={() => router.push(`/matches/${item.fixture.id}`)}
       >
@@ -123,7 +123,7 @@ export default function TeamSeason() {
 
         <Select
           placeholder="Selecione a temporada"
-          selectedIndex={seasonIndex}
+          selectedIndex={seasonIndex ?? undefined}
           onSelect={(index) => {
             const selectedIndex = Array.isArray(index) ? index[0] : index;
             setTimeout(() => {
@@ -138,22 +138,11 @@ export default function TeamSeason() {
           ))}
         </Select>
 
-        {/* Texto de instrução */}
-        {!flagSelected && (
-          <Text style={styles.instructionText}>
-            Por favor, selecione uma temporada para visualizar os jogos.
-          </Text>
-        )}
-
         {loading ? (
           <View style={[styles.container, styles.center]}>
             <ActivityIndicator size="large" />
           </View>
-        ) : !matches.length && flagSelected ? (
-          <View style={[styles.container, styles.center]}>
-            <Text style={styles.errorText}>Não foi possível carregar os jogos da temporada.</Text>
-          </View>
-        ) : flagSelected ? (
+        ) : matches.length > 0 ? (
           <FlatList
             data={matches}
             keyExtractor={(item) => item.fixture.id.toString()}
@@ -161,7 +150,15 @@ export default function TeamSeason() {
             contentContainerStyle={{ paddingBottom: 24, paddingTop: 16 }}
             showsVerticalScrollIndicator={false}
           />
-        ) : null}
+        ) : flagSelected ? (
+          <View style={[styles.container, styles.center]}>
+            <Text style={styles.errorText}>Não foi possível carregar os jogos da temporada.</Text>
+          </View>
+        ) : (
+          <Text style={styles.instructionText}>
+            Por favor, selecione uma temporada para visualizar os jogos.
+          </Text>
+        )}
       </Layout>
     </SafeAreaView>
 

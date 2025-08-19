@@ -27,7 +27,16 @@ export default function LeagueDetail() {
   const { standings, leagueData, loading } = useStandings(leagueId, season);
 
   const renderBackAction = () => (
-    <TopNavigationAction icon={BackIcon} onPress={() => router.back()} />
+    <TopNavigationAction
+      icon={BackIcon}
+      onPress={() => {
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/');
+        }
+      }}
+    />
   );
 
   return (
@@ -44,63 +53,67 @@ export default function LeagueDetail() {
             <Layout style={styles.center}>
               <Spinner size="large" />
             </Layout>
-          ) : standings.length === 0 ? (
-            <Text>Nenhum time encontrado para essa liga.</Text>
           ) : (
             <>
               {/* Header da competição */}
-              <BlurView intensity={50} tint="light" style={styles.competitionHeader}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flex: 1 }}>
-                  <View>
-                    <Text category="h5">{leagueData?.name}</Text>
-                    <Text>{leagueData?.country}</Text>
-                    <Text>Temporada: {leagueData?.season}</Text>
-                  </View>
-                  {leagueData?.logo && (
-                    <Image source={{ uri: leagueData.logo }} style={styles.logo} />
-                  )}
-                </View>
-              </BlurView>
-
-              {/* Scroll vertical + horizontal */}
-              <ScrollView style={{ flex: 1 }}>
-                <ScrollView horizontal>
-                  <View style={[styles.table, { minWidth: 700 }]}>
-                    {/* Cabeçalho */}
-                    <View style={[styles.tableRow, styles.tableHeader]}>
-                      <Text style={[styles.cell, { width: 30 }]}>#</Text>
-                      <Text style={[styles.cell, { width: 180 }]}>Time</Text>
-                      <Text style={[styles.cell, { width: 60 }]}>PJ</Text>
-                      <Text style={[styles.cell, { width: 60 }]}>V</Text>
-                      <Text style={[styles.cell, { width: 60 }]}>E</Text>
-                      <Text style={[styles.cell, { width: 60 }]}>D</Text>
-                      <Text style={[styles.cell, { width: 60 }]}>GF</Text>
-                      <Text style={[styles.cell, { width: 60 }]}>GC</Text>
-                      <Text style={[styles.cell, { width: 60 }]}>SG</Text>
-                      <Text style={[styles.cell, { width: 60 }]}>Pts</Text>
+              {leagueData && (
+                <BlurView intensity={50} tint="light" style={styles.competitionHeader}>
+                  <View style={styles.headerContent}>
+                    <View>
+                      <Text category="h5" style={{ color: "#fff" }}>{leagueData.name}</Text>
+                      <Text style={{ color: "#fff" }}>{leagueData.country}</Text>
+                      <Text style={{ color: "#fff" }}>Temporada: {leagueData.season}</Text>
                     </View>
-
-                    {/* Linhas */}
-                    {standings.map((team) => (
-                      <View style={styles.tableRow} key={team.team.id}>
-                        <Text style={[styles.cell, { width: 30 }]}>{team.rank}</Text>
-                        <View style={[styles.cell, { width: 180, flexDirection: 'row', alignItems: 'center' }]}>
-                          {team.team.logo && <Image source={{ uri: team.team.logo }} style={styles.teamLogo} />}
-                          <Text>{team.team.name}</Text>
-                        </View>
-                        <Text style={[styles.cell, { width: 60 }]}>{team.played}</Text>
-                        <Text style={[styles.cell, { width: 60 }]}>{team.win}</Text>
-                        <Text style={[styles.cell, { width: 60 }]}>{team.draw}</Text>
-                        <Text style={[styles.cell, { width: 60 }]}>{team.lose}</Text>
-                        <Text style={[styles.cell, { width: 60 }]}>{team.goalsFor}</Text>
-                        <Text style={[styles.cell, { width: 60 }]}>{team.goalsAgainst}</Text>
-                        <Text style={[styles.cell, { width: 60 }]}>{team.goalDiff}</Text>
-                        <Text style={[styles.cell, { width: 60 }]}>{team.points}</Text>
-                      </View>
-                    ))}
+                    {leagueData.logo && (
+                      <Image source={{ uri: leagueData.logo }} style={styles.logo} />
+                    )}
                   </View>
+                </BlurView>
+              )}
+
+              {/* Se não tiver standings */}
+              {standings.length === 0 ? (
+                <Text>Nenhum time encontrado para essa liga.</Text>
+              ) : (
+                <ScrollView style={{ flex: 1 }}>
+                  <ScrollView horizontal>
+                    <View style={[styles.table, { minWidth: 700 }]}>
+                      {/* Cabeçalho tabela */}
+                      <View style={[styles.tableRow, styles.tableHeader]}>
+                        <Text style={[styles.cell, { width: 30 }]}>#</Text>
+                        <Text style={[styles.cell, { width: 180 }]}>Time</Text>
+                        <Text style={[styles.cell, { width: 60 }]}>PJ</Text>
+                        <Text style={[styles.cell, { width: 60 }]}>V</Text>
+                        <Text style={[styles.cell, { width: 60 }]}>E</Text>
+                        <Text style={[styles.cell, { width: 60 }]}>D</Text>
+                        <Text style={[styles.cell, { width: 60 }]}>GF</Text>
+                        <Text style={[styles.cell, { width: 60 }]}>GC</Text>
+                        <Text style={[styles.cell, { width: 60 }]}>SG</Text>
+                        <Text style={[styles.cell, { width: 60 }]}>Pts</Text>
+                      </View>
+
+                      {/* Linhas */}
+                      {standings.map((team) => (
+                        <View style={styles.tableRow} key={team.team.id}>
+                          <Text style={[styles.cell, { width: 30 }]}>{team.rank}</Text>
+                          <View style={[styles.cell, { width: 180, flexDirection: 'row', alignItems: 'center' }]}>
+                            {team.team.logo && <Image source={{ uri: team.team.logo }} style={styles.teamLogo} />}
+                            <Text>{team.team.name}</Text>
+                          </View>
+                          <Text style={[styles.cell, { width: 60 }]}>{team.played}</Text>
+                          <Text style={[styles.cell, { width: 60 }]}>{team.win}</Text>
+                          <Text style={[styles.cell, { width: 60 }]}>{team.draw}</Text>
+                          <Text style={[styles.cell, { width: 60 }]}>{team.lose}</Text>
+                          <Text style={[styles.cell, { width: 60 }]}>{team.goalsFor}</Text>
+                          <Text style={[styles.cell, { width: 60 }]}>{team.goalsAgainst}</Text>
+                          <Text style={[styles.cell, { width: 60 }]}>{team.goalDiff}</Text>
+                          <Text style={[styles.cell, { width: 60 }]}>{team.points}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
                 </ScrollView>
-              </ScrollView>
+              )}
             </>
           )}
         </Layout>
@@ -113,14 +126,20 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   competitionHeader: {
     marginBottom: 16,
-    padding: 12,
     borderRadius: 12,
     overflow: 'hidden',
+    minHeight: 100,
   },
-  logo: { width: 80, height: 80, marginTop: 4 },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+  },
+  logo: { width: 60, height: 60, resizeMode: 'contain' },
   table: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8 },
   tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#eee', paddingVertical: 6 },
-  tableHeader: { backgroundColor: '#43e6ffff' },
+  tableHeader: { backgroundColor: '#43e6ffff', borderTopLeftRadius: 7, borderTopRightRadius: 7 },
   cell: { paddingHorizontal: 4, fontSize: 12 },
   teamLogo: { width: 20, height: 20, marginRight: 4 },
 });

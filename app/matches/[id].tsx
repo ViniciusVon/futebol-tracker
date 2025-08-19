@@ -13,10 +13,13 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  Button,
   Image,
+  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -28,6 +31,9 @@ export default function MatchDetail() {
   const [match, setMatch] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
 
   useEffect(() => {
     (async () => {
@@ -78,7 +84,7 @@ export default function MatchDetail() {
 
   const getPlayerTop = (index: number, formation: string) => {
     const lines = formation.split('-').map((n) => parseInt(n));
-    lines.unshift(1); // Goleiro
+    lines.unshift(1);
     const totalLines = lines.length;
 
     let line = 0,
@@ -108,6 +114,15 @@ export default function MatchDetail() {
       }
     }
     return 150;
+  };
+
+  const getPlayerPhoto = (playerId: number) => {
+    if (!match?.players) return `https://randomuser.me/api/portraits/men/${playerId}.jpg`;
+    for (const team of match.players) {
+      const playerData = team.players.find((p: any) => p.player.id === playerId);
+      if (playerData) return playerData.player.photo;
+    }
+    return `https://randomuser.me/api/portraits/men/${playerId}.jpg`;
   };
 
   return (
@@ -222,14 +237,32 @@ export default function MatchDetail() {
               {match.lineups?.length > 0 ? (
                 match.lineups.map((lineup: any, idx: number) => (
                   <View key={idx} style={styles.card}>
+                    {/* Nome do time e formação */}
                     <Text style={styles.infoHeader}>
                       {lineup.team?.name} ({lineup.formation})
                     </Text>
+
+                    {/* Técnico */}
+                    {lineup.coach && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                        <Avatar
+                          size="small"
+                          source={{ uri: lineup.coach.photo }}
+                          style={[styles.playerAvatar, { marginRight: 8 }]}
+                        />
+                        <Text style={styles.infoText}>Treinador: {lineup.coach.name}</Text>
+                      </View>
+                    )}
 
                     {/* Campo */}
                     <View style={styles.pitch}>
                       {lineup.startXI.map((playerObj: any, i: number) => {
                         const player = playerObj.player;
+
+                        // Busca estatísticas do jogador
+                        const teamPlayers = match.players.find((p: any) => p.team.id === lineup.team.id)?.players || [];
+                        const playerStats = teamPlayers.find((p: any) => p.player.id === player.id);
+
                         return (
                           <View
                             key={i}
@@ -241,32 +274,37 @@ export default function MatchDetail() {
                               },
                             ]}
                           >
-                            <Avatar
-                              size="small"
-                              source={{
-                                uri:
-                                  player.photo ||
-                                  `https://randomuser.me/api/portraits/men/${i}.jpg`,
+                            <TouchableOpacity
+                              onPress={() => {
+                                if (playerStats) {
+                                  setSelectedPlayer(playerStats);
+                                  setModalVisible(true);
+                                }
                               }}
-                              style={styles.playerAvatar}
-                            />
-                            <Text style={styles.playerName}>
-                              {player?.name ?? '-'}
-                            </Text>
+                            >
+                              <Avatar
+                                size="small"
+                                source={{ uri: playerStats?.player.photo || getPlayerPhoto(player.id) }}
+                                style={styles.playerAvatar}
+                              />
+                            </TouchableOpacity>
+                            <Text style={styles.playerName}>{player?.name ?? '-'}</Text>
                           </View>
                         );
                       })}
                     </View>
 
                     {/* Reservas */}
-                    <Text style={[styles.infoHeader, { marginTop: 12 }]}>
-                      Reservas:
-                    </Text>
-                    {lineup.substitutes.map((sub: any, i: number) => (
-                      <Text key={i} style={styles.infoText}>
-                        {sub.player?.name}
-                      </Text>
-                    ))}
+                    {lineup.substitutes?.length > 0 && (
+                      <>
+                        <Text style={[styles.infoHeader, { marginTop: 12 }]}>Reservas:</Text>
+                        {lineup.substitutes.map((sub: any, i: number) => (
+                          <Text key={i} style={styles.infoText}>
+                            {sub.player?.name ?? '-'}
+                          </Text>
+                        ))}
+                      </>
+                    )}
                   </View>
                 ))
               ) : (
@@ -274,7 +312,61 @@ export default function MatchDetail() {
               )}
             </ScrollView>
           </Tab>
+
+          {/* Aba de setatisticas */}
+          <Tab title="Estatísticas">
+            <ScrollView style={styles.tabContent}>
+              {match.statistics?.length > 0 ? (
+                match.statistics.map((teamStat: any, idx: number) => (
+                  <View key={idx} style={styles.card}>
+                    {/* Time */}
+                    <View style={styles.teamRow}>
+                      {teamStat.team.logo && (
+                        <Image
+                          source={{ uri: teamStat.team.logo }}
+                          style={styles.teamLogo}
+                        />
+                      )}
+                      <Text style={styles.teamName}>{teamStat.team.name}</Text>
+                    </View>
+
+                    {/* Estatísticas */}
+                    {teamStat.statistics.map((stat: any, i: number) => (
+                      <View key={i} style={styles.statRow}>
+                        <Text style={styles.statLabel}>{stat.type}</Text>
+                        <Text style={styles.statValue}>{stat.value}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))
+              ) : (
+                <Text appearance="hint">Nenhuma estatística disponível.</Text>
+              )}
+            </ScrollView>
+          </Tab>
         </TabView>
+        <Modal
+          visible={modalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{selectedPlayer?.player.name}</Text>
+              <Image
+                source={{ uri: selectedPlayer?.player.photo }}
+                style={{ width: 100, height: 100, borderRadius: 50, marginBottom: 12 }}
+              />
+              <Text style={styles.modalInfo}>Minutos: {selectedPlayer?.statistics[0].games.minutes}</Text>
+              <Text style={styles.modalInfo}>Posição: {selectedPlayer?.statistics[0].games.position}</Text>
+              <Text style={styles.modalInfo}>Rating: {selectedPlayer?.statistics[0].games.rating}</Text>
+              <Text style={styles.modalInfo}>Gols: {selectedPlayer?.statistics[0].goals.total ?? 0}</Text>
+              <Text style={styles.modalInfo}>Assistências: {selectedPlayer?.statistics[0].goals.assists ?? 0}</Text>
+              <Button title="Fechar" onPress={() => setModalVisible(false)} />
+            </View>
+          </View>
+        </Modal>
       </Layout>
     </SafeAreaView>
   );
@@ -330,4 +422,31 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
   },
+  teamRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  teamLogo: { width: 32, height: 32, marginRight: 8, resizeMode: 'contain' },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#ccc',
+  },
+  statLabel: { color: '#555', fontWeight: '500' },
+  statValue: { color: '#222', fontWeight: '700' },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    color: "#000",
+    padding: 20,
+    borderRadius: 16,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12, color: "#000" },
+  modalInfo: { fontSize: 12, fontWeight: '700', marginBottom: 12, color: "#000" },
 });
