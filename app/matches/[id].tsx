@@ -15,10 +15,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Image,
+  ImageBackground,
   SafeAreaView,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   View
 } from 'react-native';
 
@@ -81,13 +81,13 @@ export default function MatchDetail() {
   const homeTeam = match.teams.home;
   const awayTeam = match.teams.away;
 
-  const getPlayerTop = (index: number, formation: string) => {
+  const getPlayerTop = (index: number, formation: string, isHomeTeam: boolean) => {
     const lines = formation?.split('-').map((n) => parseInt(n));
     lines.unshift(1);
     const totalLines = lines.length;
 
     let line = 0,
-      count = 0;
+        count = 0;
     for (let i = 0; i < totalLines; i++) {
       count += lines[i];
       if (index < count) {
@@ -95,21 +95,27 @@ export default function MatchDetail() {
         break;
       }
     }
-    return (line / totalLines) * 300;
+
+    const fraction = line / totalLines;
+
+    return isHomeTeam
+      ? fraction * (500 / 2)
+      : 450 - fraction * (500 / 2);
   };
 
   const getPlayerLeft = (index: number, formation: string) => {
     const lines = formation?.split('-').map((n) => parseInt(n));
     lines.unshift(1);
     let line = 0,
-      count = 0;
+        count = 0;
     for (let i = 0; i < lines.length; i++) {
       count += lines[i];
       if (index < count) {
         line = i;
         const playersInLine = lines[i];
         const posInLine = index - (count - playersInLine);
-        return ((posInLine + 1) / (playersInLine + 1)) * 300;
+        const fraction = (posInLine + 1) / (playersInLine + 1);
+        return fraction * 300;
       }
     }
     return 150;
@@ -234,83 +240,120 @@ export default function MatchDetail() {
           <Tab title="Escalações">
             <ScrollView style={styles.tabContent}>
               {match.lineups?.length > 0 ? (
-                match.lineups.map((lineup: any, idx: number) => (
-                  <View key={idx} style={styles.card}>
-                    {/* Nome do time e formação */}
-                    <Text style={styles.infoHeader}>
-                      {lineup.team?.name} ({lineup.formation})
-                    </Text>
+                <View style={styles.card}>
+                  <Text style={styles.infoHeader}>Escalações</Text>
 
-                    {/* Técnico */}
-                    {lineup.coach && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                        <Avatar
-                          size="small"
-                          source={{ uri: lineup.coach.photo }}
-                          style={[styles.playerAvatar, { marginRight: 8 }]}
-                        />
-                        <Text style={styles.infoText}>Treinador: {lineup.coach.name}</Text>
-                      </View>
-                    )}
-
-                    {/* Campo */}
-                    <View style={styles.pitch}>
-                      {lineup.startXI.map((playerObj: any, i: number) => {
-                        const player = playerObj.player;
-
-                        // Busca estatísticas do jogador
-                        const teamPlayers = match.players.find((p: any) => p.team.id === lineup.team.id)?.players || [];
-                        const playerStats = teamPlayers.find((p: any) => p.player.id === player.id);
+                  {/* Campo */}
+                  <View style={styles.pitch}>
+                    <ImageBackground
+                      source={require('@/assets/images/football-pitch.jpg')} 
+                      style={{ width: '100%', height: 500, borderRadius: 16 }}
+                      imageStyle={{ borderRadius: 16 }}
+                    >
+                      {(() => {
+                        const homeTeamLineup = match.lineups.find((l: any) => l.team.id === homeTeam.id);
+                        const awayTeamLineup = match.lineups.find((l: any) => l.team.id === awayTeam.id);
+                        if (!homeTeamLineup || !awayTeamLineup) return null;
 
                         return (
-                          <View
-                            key={i}
-                            style={[
-                              styles.playerSpot,
-                              {
-                                top: getPlayerTop(i, lineup.formation),
-                                left: getPlayerLeft(i, lineup.formation),
-                              },
-                            ]}
-                          >
-                            <TouchableOpacity
-                              onPress={() => {
-                                if (playerStats) {
-                                  setSelectedPlayer(playerStats);
-                                  setModalVisible(true);
-                                }
-                              }}
-                            >
-                              <Avatar
-                                size="small"
-                                source={{ uri: playerStats?.player.photo || getPlayerPhoto(player.id) }}
-                                style={styles.playerAvatar}
-                              />
-                            </TouchableOpacity>
-                            <Text style={styles.playerName}>{player?.name ?? '-'}</Text>
-                          </View>
-                        );
-                      })}
-                    </View>
+                          <>
+                            {/* Técnico time da casa */}
+                            {homeTeamLineup.coach && (
+                              <View style={[styles.coachSpot, { top: 0, left: 10 }]}>
+                                <Avatar size="small" source={{ uri: homeTeamLineup.coach.photo }} />
+                                <Text style={styles.playerName}>{homeTeamLineup.coach.name}</Text>
+                              </View>
+                            )}
 
-                    {/* Reservas */}
-                    {lineup.substitutes?.length > 0 && (
-                      <>
-                        <Text style={[styles.infoHeader, { marginTop: 12 }]}>Reservas:</Text>
-                        {lineup.substitutes.map((sub: any, i: number) => (
-                          <Text key={i} style={styles.infoText}>
+                            {/* Técnico time visitante */}
+                            {awayTeamLineup.coach && (
+                              <View style={[styles.coachSpot, { bottom: 0, right: 10 }]}>
+                                <Avatar size="small" source={{ uri: awayTeamLineup.coach.photo }} />
+                                <Text style={styles.playerName}>{awayTeamLineup.coach.name}</Text>
+                              </View>
+                            )}
+
+                            {/* Time da casa */}
+                            {homeTeamLineup.startXI.map((playerObj: any, i: number) => (
+                              <View
+                                key={`home-${i}`}
+                                style={[
+                                  styles.playerSpot,
+                                  {
+                                    top: getPlayerTop(i, homeTeamLineup.formation, true),
+                                    left: getPlayerLeft(i, homeTeamLineup.formation),
+                                  },
+                                ]}
+                              >
+                                <Avatar
+                                  size="small"
+                                  source={{ uri: playerObj.player.photo || getPlayerPhoto(playerObj.player.id) }}
+                                />
+                                <Text style={styles.playerName}>{playerObj.player.name}</Text>
+                              </View>
+                            ))}
+
+                            {/* Time visitante */}
+                            {awayTeamLineup.startXI.map((playerObj: any, i: number) => (
+                              <View
+                                key={`away-${i}`}
+                                style={[
+                                  styles.playerSpot,
+                                  {
+                                    top: getPlayerTop(i, awayTeamLineup.formation, false),
+                                    left: getPlayerLeft(i, awayTeamLineup.formation),
+                                  },
+                                ]}
+                              >
+                                <Avatar
+                                  size="small"
+                                  source={{ uri: playerObj.player.photo || getPlayerPhoto(playerObj.player.id) }}
+                                />
+                                <Text style={styles.playerName}>{playerObj.player.name}</Text>
+                              </View>
+                            ))}
+
+                          </>
+                        );
+                      })()}
+                      
+                    </ImageBackground>
+                  </View>
+
+                  {/* Reservas home */}
+                  {match.lineups.find((l: any) => l.team.id === homeTeam.id)?.substitutes?.length > 0 && (
+                    <>
+                      <Text style={[styles.infoHeader, { marginTop: 12 }]}>Reservas {homeTeam.name}:</Text>
+                      {match.lineups
+                        .find((l: any) => l.team.id === homeTeam.id)
+                        .substitutes.map((sub: any, i: number) => (
+                          <Text key={`home-sub-${i}`} style={styles.infoText}>
                             {sub.player?.name ?? '-'}
                           </Text>
                         ))}
-                      </>
-                    )}
-                  </View>
-                ))
+                    </>
+                  )}
+
+                  {/* Reservas away */}
+                  {match.lineups.find((l: any) => l.team.id === awayTeam.id)?.substitutes?.length > 0 && (
+                    <>
+                      <Text style={[styles.infoHeader, { marginTop: 12 }]}>Reservas {awayTeam.name}:</Text>
+                      {match.lineups
+                        .find((l: any) => l.team.id === awayTeam.id)
+                        .substitutes.map((sub: any, i: number) => (
+                          <Text key={`away-sub-${i}`} style={styles.infoText}>
+                            {sub.player?.name ?? '-'}
+                          </Text>
+                        ))}
+                    </>
+                  )}
+                </View>
               ) : (
                 <Text appearance="hint">Nenhuma escalação disponível.</Text>
               )}
             </ScrollView>
           </Tab>
+
 
           {/* Aba de setatisticas */}
           <Tab title="Estatísticas">
@@ -384,7 +427,7 @@ const styles = StyleSheet.create({
   errorText: { color: 'red', fontSize: 16 },
   pitch: {
     width: '100%',
-    height: 300,
+    height: 500,
     backgroundColor: '#4CAF50',
     borderRadius: 16,
     marginTop: 12,
@@ -415,4 +458,9 @@ const styles = StyleSheet.create({
   },
   statLabel: { color: '#555', fontWeight: '500' },
   statValue: { color: '#222', fontWeight: '700' },
+  coachSpot: {
+    position: 'absolute',
+    alignItems: 'center',
+    width: 60,
+  },
 });
