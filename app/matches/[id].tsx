@@ -1,3 +1,4 @@
+import { PlayerModal } from '@/components/PlayerModal';
 import { api } from '@/services/api';
 import {
   Avatar,
@@ -13,14 +14,12 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Button,
   Image,
-  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 const BackIcon = (props: any) => <Icon {...props} name="arrow-back" />;
@@ -345,28 +344,11 @@ export default function MatchDetail() {
             </ScrollView>
           </Tab>
         </TabView>
-        <Modal
+        <PlayerModal
           visible={modalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>{selectedPlayer?.player.name}</Text>
-              <Image
-                source={{ uri: selectedPlayer?.player.photo }}
-                style={{ width: 100, height: 100, borderRadius: 50, marginBottom: 12 }}
-              />
-              <Text style={styles.modalInfo}>Minutos: {selectedPlayer?.statistics[0].games.minutes}</Text>
-              <Text style={styles.modalInfo}>Posição: {selectedPlayer?.statistics[0].games.position}</Text>
-              <Text style={styles.modalInfo}>Rating: {selectedPlayer?.statistics[0].games.rating}</Text>
-              <Text style={styles.modalInfo}>Gols: {selectedPlayer?.statistics[0].goals.total ?? 0}</Text>
-              <Text style={styles.modalInfo}>Assistências: {selectedPlayer?.statistics[0].goals.assists ?? 0}</Text>
-              <Button title="Fechar" onPress={() => setModalVisible(false)} />
-            </View>
-          </View>
-        </Modal>
+          onClose={() => setModalVisible(false)}
+          selectedPlayer={selectedPlayer}
+        />
       </Layout>
     </SafeAreaView>
   );
@@ -433,20 +415,4 @@ const styles = StyleSheet.create({
   },
   statLabel: { color: '#555', fontWeight: '500' },
   statValue: { color: '#222', fontWeight: '700' },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    color: "#000",
-    padding: 20,
-    borderRadius: 16,
-    width: '80%',
-    alignItems: 'center',
-  },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12, color: "#000" },
-  modalInfo: { fontSize: 12, fontWeight: '700', marginBottom: 12, color: "#000" },
 });

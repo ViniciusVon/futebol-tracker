@@ -12,7 +12,7 @@ import {
 } from '@ui-kitten/components';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { FlatList, Image, SafeAreaView, StyleSheet, TouchableOpacity } from 'react-native';
+import { FlatList, Image, SafeAreaView, StyleSheet } from 'react-native';
 
 interface TeamDetail {
   team: {
@@ -152,16 +152,18 @@ export default function TeamsDetail() {
                 data={players}
                 keyExtractor={(item) => item.player.id.toString()}
                 renderItem={({ item }) => (
-                  <TouchableOpacity
-                    onPress={() => router.push(`/players/${item.player.id}`)}
+                  <Card
+                    style={[styles.card, { flexDirection: 'row', alignItems: 'center' }]}
+                    status="basic"
+                    onPress={() => {
+                      router.push(`/players/${item.player?.id}`);
+                    }}
                   >
-                    <Card style={[styles.card, { flexDirection: 'row', alignItems: 'center' }]} status="basic">
-                      <Image source={{ uri: item.player.photo }} style={styles.playerPhoto} />
-                      <Text category="s1" style={{ marginLeft: 12 }}>
-                        {item.player.name}
-                      </Text>
-                    </Card>
-                  </TouchableOpacity>
+                    <Image source={{ uri: item.player.photo }} style={styles.playerPhoto} />
+                    <Text category="s1" style={{ marginLeft: 12 }}>
+                      {item.player.name}
+                    </Text>
+                  </Card>
                 )}
               />
             </Layout>
