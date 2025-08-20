@@ -7,7 +7,7 @@ import {
   TopNavigation,
   TopNavigationAction
 } from '@ui-kitten/components';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -35,6 +35,7 @@ const BackIcon = (props: any) => <Icon {...props} name="arrow-back" />;
 
 export default function TeamSeason() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [season, setSeason] = useState<number>(2021);
@@ -51,7 +52,7 @@ export default function TeamSeason() {
 
     const fetchMatches = async () => {
       try {
-        const res = await api.get('/fixtures', { params: { team: 529, season } });
+        const res = await api.get('/fixtures', { params: { team: id, season } });
         setMatches(res.data.response || []);
       } catch (err) {
         console.error(err);

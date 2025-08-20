@@ -83,7 +83,7 @@ export default function MatchDetail() {
   const awayTeam = match.teams.away;
 
   const getPlayerTop = (index: number, formation: string) => {
-    const lines = formation.split('-').map((n) => parseInt(n));
+    const lines = formation?.split('-').map((n) => parseInt(n));
     lines.unshift(1);
     const totalLines = lines.length;
 
@@ -100,7 +100,7 @@ export default function MatchDetail() {
   };
 
   const getPlayerLeft = (index: number, formation: string) => {
-    const lines = formation.split('-').map((n) => parseInt(n));
+    const lines = formation?.split('-').map((n) => parseInt(n));
     lines.unshift(1);
     let line = 0,
       count = 0;
