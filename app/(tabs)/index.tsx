@@ -45,7 +45,7 @@ export default function Home() {
       <Layout style={styles.container}>
         <TopNavigation alignment="center" title={() => <Text category="h5">Brubyscore</Text>} />
 
-        <View style={{ width: '100%' }}>
+        <View>
           <Autocomplete
             placeholder="Buscar time..."
             value={query}
