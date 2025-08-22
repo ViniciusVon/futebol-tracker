@@ -1,3 +1,4 @@
+import { PlayerWithStats } from '@/types/match';
 import { Button, Card, Modal, Text } from '@ui-kitten/components';
 import React from 'react';
 import { Image, StyleSheet } from 'react-native';
@@ -5,23 +6,7 @@ import { Image, StyleSheet } from 'react-native';
 interface PlayerModalProps {
   visible: boolean;
   onClose: () => void;
-  selectedPlayer?: {
-    player: {
-      name: string;
-      photo: string;
-    };
-    statistics: {
-      games: {
-        minutes: number;
-        position: string;
-        rating: string;
-      };
-      goals: {
-        total: number | null;
-        assists: number | null;
-      };
-    }[];
-  };
+  selectedPlayer: PlayerWithStats | null;
 }
 
 export const PlayerModal: React.FC<PlayerModalProps> = ({ visible, onClose, selectedPlayer }) => {
@@ -31,13 +16,13 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({ visible, onClose, sele
       backdropStyle={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
       onBackdropPress={onClose}
     >
-      <Card disabled={true}>
+      <Card disabled={true} style={styles.card}>
         <Text category="h6" style={styles.modalTitle}>
-          {selectedPlayer?.player.name}
+          {selectedPlayer?.player?.name}
         </Text>
 
         <Image
-          source={{ uri: selectedPlayer?.player.photo }}
+          source={{ uri: selectedPlayer?.player?.photo }}
           style={{ width: 100, height: 100, borderRadius: 50, marginBottom: 12, alignSelf: 'center' }}
         />
 
@@ -61,15 +46,17 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'rgba(0,0,0,0.5)',
+        width: "100%"
     },
     modalContent: {
         backgroundColor: '#fff',
-        color: "#000",
+        color: "#fff",
         padding: 20,
         borderRadius: 16,
         width: '80%',
         alignItems: 'center',
     },
-    modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12, color: "#000" },
-    modalInfo: { fontSize: 12, fontWeight: '700', marginBottom: 12, color: "#000" },
+    modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12, color: "#fff" , display: "flex", justifyContent: "center", textAlign: "center"},
+    modalInfo: { fontSize: 12, fontWeight: '700', marginBottom: 12, color: "#fff" },
+    card: { width: 300}
 })

@@ -1,17 +1,31 @@
 import { Team, Teams } from '@/enums/TeamsEnum';
 import { Autocomplete, AutocompleteItem, Card, Icon, Layout, Text, TopNavigation } from '@ui-kitten/components';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { FlatList, SafeAreaView, StyleSheet, View } from 'react-native';
 
 export default function Home() {
   const router = useRouter();
   const [query, setQuery] = useState('');
+  const [data, setData] = useState<Team[]>(Teams); // times filtrados
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
-  const filteredTeams = Teams.filter(team =>
-    team.name.toLowerCase().includes(query.toLowerCase())
-  );
+  const filter = useCallback((team: Team, q: string) => {
+    return team.name.toLowerCase().includes(q.toLowerCase());
+  }, []);
+
+  const onSelect = useCallback((index: number) => {
+    const team = data[index];
+    if (team) {
+      setSelectedTeam(team);
+      setQuery(team.name);
+    }
+  }, [data]);
+
+  const onChangeText = useCallback((text: string) => {
+    setQuery(text);
+    setData(Teams.filter(team => filter(team, text)));
+  }, [filter]);
 
   const options = selectedTeam ? [
     {
@@ -33,7 +47,13 @@ export default function Home() {
   const renderItem = ({ item }: any) => (
     <Card style={styles.card} onPress={() => router.push(item.route)} status="basic">
       <View style={styles.cardHeader}>
-        {item.icon && <Icon name={item.icon} style={styles.icon} />}
+        {item.icon && (
+          <Icon
+            name={item.icon}
+            fill="#3366FF"
+            style={{ width: 24, height: 24, marginRight: 8 }}
+          />
+        )}
         <Text category="h6">{item.title}</Text>
       </View>
       <Text appearance="hint" category="s1">{item.subtitle}</Text>
@@ -43,25 +63,22 @@ export default function Home() {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <Layout style={styles.container}>
-        <TopNavigation alignment="center" title={() => <Text category="h5">Brubyscore</Text>} />
+        <TopNavigation alignment="center" title={<Text category="h5">Brubyscore</Text>} />
 
-        <View>
-          <Autocomplete
-            placeholder="Buscar time..."
-            value={query}
-            onChangeText={setQuery}
-            onSelect={(index: number) => {
-              requestAnimationFrame(() => {
-                setSelectedTeam(filteredTeams[index]);
-                setQuery(filteredTeams[index].name);
-              });
-            }}
-          >
-            {filteredTeams.map(team => (
-              <AutocompleteItem key={team.id} title={team.name} />
-            ))}
-          </Autocomplete>
-        </View>
+        <Autocomplete
+          placeholder="Buscar time..."
+          value={query}
+          onSelect={onSelect}
+          onChangeText={onChangeText}
+        >
+          {data.map((team) => (
+            <AutocompleteItem
+              key={team.id}
+              title={team.name}
+            />
+          ))}
+        </Autocomplete>
+        
 
         <FlatList
           data={options}
@@ -79,5 +96,4 @@ const styles = StyleSheet.create({
   listContainer: { paddingTop: 16, paddingBottom: 32 },
   card: { marginBottom: 12, borderRadius: 8 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  icon: { width: 24, height: 24, marginRight: 8, tintColor: '#3366FF' },
 });

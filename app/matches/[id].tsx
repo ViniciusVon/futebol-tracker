@@ -1,44 +1,32 @@
+import { EventCard } from '@/components/EventCard';
+import { LineupPlayer } from '@/components/LineupPlayer';
 import { PlayerModal } from '@/components/PlayerModal';
+import { TeamSwitch } from '@/components/TeamSwitch';
 import { api } from '@/services/api';
-import {
-  Avatar,
-  Icon,
-  Layout,
-  Spinner,
-  Tab,
-  TabView,
-  Text,
-  TopNavigation,
-  TopNavigationAction,
-} from '@ui-kitten/components';
+import { Match, PlayerWithStats } from '@/types/match';
+import { Icon, Layout, Spinner, Tab, TabView, Text, TopNavigation, TopNavigationAction } from '@ui-kitten/components';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import {
-  Image,
-  ImageBackground,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  View
-} from 'react-native';
+import { Image, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
 
 const BackIcon = (props: any) => <Icon {...props} name="arrow-back" />;
 
 export default function MatchDetail() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const [match, setMatch] = useState<any>(null);
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithStats | null>(null);
 
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedTeamIndex, setSelectedTeamIndex] = useState(0);
 
   useEffect(() => {
     (async () => {
       try {
         const res = await api.get('/fixtures', { params: { id } });
-        setMatch(res.data.response[0]);
+        setMatch(res.data.response[0] as Match);
       } catch (err) {
         console.error(err);
       } finally {
@@ -47,9 +35,7 @@ export default function MatchDetail() {
     })();
   }, [id]);
 
-  const renderBackAction = () => (
-    <TopNavigationAction icon={BackIcon} onPress={() => router.back()} />
-  );
+  const renderBackAction = () => <TopNavigationAction icon={BackIcon} onPress={() => router.back()} />;
 
   if (loading) {
     return (
@@ -78,58 +64,6 @@ export default function MatchDetail() {
     minute: '2-digit',
   });
 
-  const homeTeam = match.teams.home;
-  const awayTeam = match.teams.away;
-
-  const getPlayerTop = (index: number, formation: string, isHomeTeam: boolean) => {
-    const lines = formation?.split('-').map((n) => parseInt(n));
-    lines.unshift(1);
-    const totalLines = lines.length;
-
-    let line = 0,
-        count = 0;
-    for (let i = 0; i < totalLines; i++) {
-      count += lines[i];
-      if (index < count) {
-        line = i;
-        break;
-      }
-    }
-
-    const fraction = line / totalLines;
-
-    return isHomeTeam
-      ? fraction * (500 / 2)
-      : 450 - fraction * (500 / 2);
-  };
-
-  const getPlayerLeft = (index: number, formation: string) => {
-    const lines = formation?.split('-').map((n) => parseInt(n));
-    lines.unshift(1);
-    let line = 0,
-        count = 0;
-    for (let i = 0; i < lines.length; i++) {
-      count += lines[i];
-      if (index < count) {
-        line = i;
-        const playersInLine = lines[i];
-        const posInLine = index - (count - playersInLine);
-        const fraction = (posInLine + 1) / (playersInLine + 1);
-        return fraction * 300;
-      }
-    }
-    return 150;
-  };
-
-  const getPlayerPhoto = (playerId: number) => {
-    if (!match?.players) return `https://randomuser.me/api/portraits/men/${playerId}.jpg`;
-    for (const team of match.players) {
-      const playerData = team.players.find((p: any) => p.player.id === playerId);
-      if (playerData) return playerData.player.photo;
-    }
-    return `https://randomuser.me/api/portraits/men/${playerId}.jpg`;
-  };
-
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <Layout style={{ flex: 1 }}>
@@ -139,96 +73,68 @@ export default function MatchDetail() {
           accessoryLeft={renderBackAction}
         />
 
-        <TabView
-          selectedIndex={selectedIndex}
-          onSelect={(index) => setSelectedIndex(index)}
-          style={{ flex: 1 }}
-        >
-          {/* Aba de informações */}
+        {/* Placar e Times */}
+        <View style={styles.card}>
+          <View style={styles.teamsRow}>
+            <View style={styles.teamContainer}>
+              {match.teams.home.logo && <Image source={{ uri: match.teams.home.logo }} style={styles.logo} />}
+              <Text style={styles.teamName}>{match.teams.home.name}</Text>
+            </View>
+
+            <View style={styles.scoreContainer}>
+              <Text style={styles.scoreText}>{match.goals?.home ?? 0}</Text>
+              <Text style={styles.scoreSeparator}>-</Text>
+              <Text style={styles.scoreText}>{match.goals?.away ?? 0}</Text>
+            </View>
+
+            <View style={styles.teamContainer}>
+              {match.teams.away.logo && <Image source={{ uri: match.teams.away.logo }} style={styles.logo} />}
+              <Text style={styles.teamName}>{match.teams.away.name}</Text>
+            </View>
+          </View>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.statusText}>{match.fixture.status.long}</Text>
+            <Text style={styles.dateText}>{formattedDate}</Text>
+          </View>
+        </View>
+
+        <TabView selectedIndex={selectedIndex} onSelect={setSelectedIndex} style={{ flex: 1 }}>
+          {/* Aba de Informações */}
           <Tab title="Info">
             <ScrollView style={styles.tabContent}>
-              {/* Placar e Times */}
-              <View style={styles.card}>
-                <View style={styles.teamsRow}>
-                  <View style={styles.teamContainer}>
-                    {homeTeam?.logo && (
-                      <Image source={{ uri: homeTeam.logo }} style={styles.logo} />
-                    )}
-                    <Text style={styles.teamName}>{homeTeam?.name ?? '-'}</Text>
-                  </View>
-
-                  <View style={styles.scoreContainer}>
-                    <Text style={styles.scoreText}>{match.goals?.home ?? '-'}</Text>
-                    <Text style={styles.scoreSeparator}>-</Text>
-                    <Text style={styles.scoreText}>{match.goals?.away ?? '-'}</Text>
-                  </View>
-
-                  <View style={styles.teamContainer}>
-                    {awayTeam?.logo && (
-                      <Image source={{ uri: awayTeam.logo }} style={styles.logo} />
-                    )}
-                    <Text style={styles.teamName}>{awayTeam?.name ?? '-'}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.statusText}>
-                    {match.fixture?.status?.long ?? '-'}
-                  </Text>
-                  <Text style={styles.dateText}>{formattedDate}</Text>
-                </View>
-              </View>
-
-              {/* Liga / Temporada */}
               {match.league && (
                 <View style={styles.card}>
-                  <Text category="h6" style={styles.infoHeader}>
-                    Liga / Temporada
-                  </Text>
-                  <Text style={styles.infoText}>
-                    {match.league?.name ?? '-'} - {match.league?.season ?? '-'}
-                  </Text>
-                  <Text style={styles.infoText}>
-                    {match.league?.round ?? '-'}
-                  </Text>
+                  <Text category="h6" style={styles.infoHeader}>Liga / Temporada</Text>
+                  <Text style={styles.infoText}>{match.league.name} - {match.league.season}</Text>
+                  <Text style={styles.infoText}>{match.league.round}</Text>
                 </View>
               )}
-
-              {/* Local */}
-              {match.fixture?.venue && (
+              {match.fixture.venue && (
                 <View style={styles.card}>
-                  <Text category="h6" style={styles.infoHeader}>
-                    Local do Jogo
-                  </Text>
-                  <Text style={styles.infoText}>
-                    {match.fixture.venue?.name ?? '-'} ({match.fixture.venue?.city ?? '-'})
-                  </Text>
+                  <Text category="h6" style={styles.infoHeader}>Local do Jogo</Text>
+                  <Text style={styles.infoText}>{match.fixture.venue.name} ({match.fixture.venue.city})</Text>
                 </View>
               )}
-
-              {/* Árbitro */}
-              {match.fixture?.referee && (
+              {match.fixture.referee && (
                 <View style={styles.card}>
-                  <Text category="h6" style={styles.infoHeader}>
-                    Árbitro
-                  </Text>
-                  <Text style={styles.infoText}>{match.fixture.referee ?? '-'}</Text>
+                  <Text category="h6" style={styles.infoHeader}>Árbitro</Text>
+                  <Text style={styles.infoText}>{match.fixture.referee}</Text>
                 </View>
               )}
             </ScrollView>
           </Tab>
 
-          {/* Aba de eventos */}
+          {/* Aba de Eventos */}
           <Tab title="Eventos">
             <ScrollView style={styles.tabContent}>
-              {match.events?.length > 0 ? (
-                match.events.map((event: any, i: number) => (
-                  <View key={i} style={styles.card}>
-                    <Text style={styles.infoText}>
-                      [{event.time?.elapsed ?? '-'}'] {event.team?.name ?? '-'} -{' '}
-                      {event.player?.name ?? '-'} ({event.detail ?? '-'})
-                    </Text>
-                  </View>
+              {match.events?.length ? (
+                match.events.slice().reverse().map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    isHome={event.team?.id === match.teams.home.id}
+                  />
                 ))
               ) : (
                 <Text appearance="hint">Nenhum evento registrado.</Text>
@@ -236,157 +142,53 @@ export default function MatchDetail() {
             </ScrollView>
           </Tab>
 
-          {/* Aba de escalações */}
+          {/* Aba de Escalações */}
           <Tab title="Escalações">
             <ScrollView style={styles.tabContent}>
-              {match.lineups?.length > 0 ? (
-                <View style={styles.card}>
-                  <Text style={styles.infoHeader}>Escalações</Text>
+              {match.lineups?.length ? (
+                match.lineups[selectedTeamIndex].startXI.map((playerObj, i) => (
+                 <LineupPlayer
+                    key={playerObj.player.id}
+                    playerObj={playerObj}
+                    getPlayerPhoto={(id) => {
+                      const pl = match.players?.flatMap(team => team.players)
+                                  .find(p => p.player.id === id);
+                      return pl?.player.photo || '';
+                    }}
+                    onPress={() => {
+                      const playerWithStats = match.players
+                        ?.flatMap(team => team.players)
+                        .find(p => p.player.id === playerObj.player.id);
 
-                  {/* Campo */}
-                  <View style={styles.pitch}>
-                    <ImageBackground
-                      source={require('@/assets/images/football-pitch.jpg')} 
-                      style={{ width: '100%', height: 500, borderRadius: 16 }}
-                      imageStyle={{ borderRadius: 16 }}
-                    >
-                      {(() => {
-                        const homeTeamLineup = match.lineups.find((l: any) => l.team.id === homeTeam.id);
-                        const awayTeamLineup = match.lineups.find((l: any) => l.team.id === awayTeam.id);
-                        if (!homeTeamLineup || !awayTeamLineup) return null;
-
-                        return (
-                          <>
-                            {/* Técnico time da casa */}
-                            {homeTeamLineup.coach && (
-                              <View style={[styles.coachSpot, { top: 0, left: 10 }]}>
-                                <Avatar size="small" source={{ uri: homeTeamLineup.coach.photo }} />
-                                <Text style={styles.playerName}>{homeTeamLineup.coach.name}</Text>
-                              </View>
-                            )}
-
-                            {/* Técnico time visitante */}
-                            {awayTeamLineup.coach && (
-                              <View style={[styles.coachSpot, { bottom: 0, right: 10 }]}>
-                                <Avatar size="small" source={{ uri: awayTeamLineup.coach.photo }} />
-                                <Text style={styles.playerName}>{awayTeamLineup.coach.name}</Text>
-                              </View>
-                            )}
-
-                            {/* Time da casa */}
-                            {homeTeamLineup.startXI.map((playerObj: any, i: number) => (
-                              <View
-                                key={`home-${i}`}
-                                style={[
-                                  styles.playerSpot,
-                                  {
-                                    top: getPlayerTop(i, homeTeamLineup.formation, true),
-                                    left: getPlayerLeft(i, homeTeamLineup.formation),
-                                  },
-                                ]}
-                              >
-                                <Avatar
-                                  size="small"
-                                  source={{ uri: playerObj.player.photo || getPlayerPhoto(playerObj.player.id) }}
-                                />
-                                <Text style={styles.playerName}>{playerObj.player.name}</Text>
-                              </View>
-                            ))}
-
-                            {/* Time visitante */}
-                            {awayTeamLineup.startXI.map((playerObj: any, i: number) => (
-                              <View
-                                key={`away-${i}`}
-                                style={[
-                                  styles.playerSpot,
-                                  {
-                                    top: getPlayerTop(i, awayTeamLineup.formation, false),
-                                    left: getPlayerLeft(i, awayTeamLineup.formation),
-                                  },
-                                ]}
-                              >
-                                <Avatar
-                                  size="small"
-                                  source={{ uri: playerObj.player.photo || getPlayerPhoto(playerObj.player.id) }}
-                                />
-                                <Text style={styles.playerName}>{playerObj.player.name}</Text>
-                              </View>
-                            ))}
-
-                          </>
-                        );
-                      })()}
-                      
-                    </ImageBackground>
-                  </View>
-
-                  {/* Reservas home */}
-                  {match.lineups.find((l: any) => l.team.id === homeTeam.id)?.substitutes?.length > 0 && (
-                    <>
-                      <Text style={[styles.infoHeader, { marginTop: 12 }]}>Reservas {homeTeam.name}:</Text>
-                      {match.lineups
-                        .find((l: any) => l.team.id === homeTeam.id)
-                        .substitutes.map((sub: any, i: number) => (
-                          <Text key={`home-sub-${i}`} style={styles.infoText}>
-                            {sub.player?.name ?? '-'}
-                          </Text>
-                        ))}
-                    </>
-                  )}
-
-                  {/* Reservas away */}
-                  {match.lineups.find((l: any) => l.team.id === awayTeam.id)?.substitutes?.length > 0 && (
-                    <>
-                      <Text style={[styles.infoHeader, { marginTop: 12 }]}>Reservas {awayTeam.name}:</Text>
-                      {match.lineups
-                        .find((l: any) => l.team.id === awayTeam.id)
-                        .substitutes.map((sub: any, i: number) => (
-                          <Text key={`away-sub-${i}`} style={styles.infoText}>
-                            {sub.player?.name ?? '-'}
-                          </Text>
-                        ))}
-                    </>
-                  )}
-                </View>
+                      if (playerWithStats) {
+                        setSelectedPlayer(playerWithStats);
+                        setModalVisible(true);
+                      }
+                    }}
+                  />
+                ))
               ) : (
                 <Text appearance="hint">Nenhuma escalação disponível.</Text>
               )}
             </ScrollView>
           </Tab>
 
-
-          {/* Aba de setatisticas */}
+          {/* Aba de Estatísticas */}
           <Tab title="Estatísticas">
             <ScrollView style={styles.tabContent}>
-              {match.statistics?.length > 0 ? (
-                match.statistics.map((teamStat: any, idx: number) => (
-                  <View key={idx} style={styles.card}>
-                    {/* Time */}
-                    <View style={styles.teamRow}>
-                      {teamStat.team.logo && (
-                        <Image
-                          source={{ uri: teamStat.team.logo }}
-                          style={styles.teamLogo}
-                        />
-                      )}
-                      <Text style={styles.teamName}>{teamStat.team.name}</Text>
-                    </View>
-
-                    {/* Estatísticas */}
-                    {teamStat.statistics.map((stat: any, i: number) => (
-                      <View key={i} style={styles.statRow}>
-                        <Text style={styles.statLabel}>{stat.type}</Text>
-                        <Text style={styles.statValue}>{stat.value}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ))
+              {match.statistics?.length ? (
+                <TeamSwitch
+                  teams={match.statistics}
+                  selectedIndex={selectedTeamIndex}
+                  onSelect={setSelectedTeamIndex}
+                />
               ) : (
                 <Text appearance="hint">Nenhuma estatística disponível.</Text>
               )}
             </ScrollView>
           </Tab>
         </TabView>
+
         <PlayerModal
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
@@ -401,17 +203,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
   center: { justifyContent: 'center', alignItems: 'center' },
   tabContent: { flex: 1, padding: 16 },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   teamsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   teamContainer: { alignItems: 'center', flex: 1 },
   logo: { width: 48, height: 48, marginBottom: 8, resizeMode: 'contain' },
@@ -422,45 +214,6 @@ const styles = StyleSheet.create({
   infoRow: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between' },
   statusText: { fontSize: 14, fontWeight: '500', color: '#555' },
   dateText: { fontSize: 14, fontWeight: '400', color: '#777' },
-  infoText: { fontSize: 16, fontWeight: '700', color: '#222' },
+  infoText: { fontSize: 16, fontWeight: '700', color: '#9a9a9aff' },
   infoHeader: { fontWeight: '700', color: '#222' },
-  errorText: { color: 'red', fontSize: 16 },
-  pitch: {
-    width: '100%',
-    height: 500,
-    backgroundColor: '#4CAF50',
-    borderRadius: 16,
-    marginTop: 12,
-    position: 'relative',
-  },
-  playerSpot: {
-    position: 'absolute',
-    alignItems: 'center',
-    width: 60,
-  },
-  playerAvatar: {
-    marginBottom: 4,
-  },
-  playerName: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#fff',
-    textAlign: 'center',
-  },
-  teamRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  teamLogo: { width: 32, height: 32, marginRight: 8, resizeMode: 'contain' },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#ccc',
-  },
-  statLabel: { color: '#555', fontWeight: '500' },
-  statValue: { color: '#222', fontWeight: '700' },
-  coachSpot: {
-    position: 'absolute',
-    alignItems: 'center',
-    width: 60,
-  },
 });
