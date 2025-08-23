@@ -1,7 +1,7 @@
 import { EventCard } from '@/components/EventCard';
 import { LineupPlayer } from '@/components/LineupPlayer';
 import { PlayerModal } from '@/components/PlayerModal';
-import { TeamSwitch } from '@/components/TeamSwitch';
+import { StatsRow } from '@/components/StatsRow';
 import { api } from '@/services/api';
 import { Match, Player, PlayerWithStats } from '@/types/match';
 import { Avatar, Icon, Layout, Spinner, Tab, TabView, Text, TopNavigation, TopNavigationAction } from '@ui-kitten/components';
@@ -20,7 +20,6 @@ export default function MatchDetail() {
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithStats | null>(null);
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedTeamIndex, setSelectedTeamIndex] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -210,8 +209,18 @@ export default function MatchDetail() {
 
                         return (
                           <>
-                          {/* Técnico time da casa */} 
-                          {homeTeamLineup.coach && ( <View style={[styles.coachSpot, { top: 0, left: 10 }]}> <Avatar size="small" source={{ uri: homeTeamLineup.coach.photo }} /> <Text style={styles.playerName}>{homeTeamLineup.coach.name}</Text> </View> )} {/* Técnico time visitante */} {awayTeamLineup.coach && ( <View style={[styles.coachSpot, { bottom: 7, right: 10 }]}> <Avatar size="small" source={{ uri: awayTeamLineup.coach.photo }} /> <Text style={styles.playerName}>{awayTeamLineup.coach.name}</Text> </View> )}
+                            {/* Técnico time da casa */} 
+                            {homeTeamLineup.coach && ( 
+                              <View style={[styles.coachSpot, { top: 0, left: 10 }]}>
+                              <Avatar size="small" source={{ uri: homeTeamLineup.coach.photo }} />
+                              <Text style={styles.playerName}>{homeTeamLineup.coach.name}</Text> </View> )
+                            }
+                            {awayTeamLineup.coach && ( 
+                              <View style={[styles.coachSpot, { bottom: 7, right: 10 }]}>
+                              <Avatar size="small" source={{ uri: awayTeamLineup.coach.photo }} />
+                              <Text style={styles.playerName}>{awayTeamLineup.coach.name}</Text> 
+                              </View> )
+                            }
                             {homeTeamLineup.startXI.map((playerObj, i) => (
                               <View
                                 key={`home-${playerObj.player.id}`}
@@ -264,12 +273,35 @@ export default function MatchDetail() {
           {/* Aba de Estatísticas */}
           <Tab title="Estatísticas">
             <ScrollView style={styles.tabContent}>
-              {match.statistics?.length ? (
-                <TeamSwitch
-                  teams={match.statistics}
-                  selectedIndex={selectedTeamIndex}
-                  onSelect={setSelectedTeamIndex}
-                />
+              {match.statistics && match.statistics.length > 0 ? (
+                <View>
+                  {(() => {
+                    const homeStats = match.statistics.find(s => s.team.id === homeTeam.id)?.statistics;
+                    const awayStats = match.statistics.find(s => s.team.id === awayTeam.id)?.statistics;
+
+                    if (!homeStats || !awayStats) {
+                      return <Text appearance="hint">Dados de estatísticas incompletos.</Text>;
+                    }
+
+                    const allStatTypes = [...new Set([
+                      ...homeStats.map(s => s.type), 
+                      ...awayStats.map(s => s.type)
+                    ])];
+                    
+                    return allStatTypes.map((type) => {
+                      const statHome = homeStats.find(s => s.type === type);
+                      const statAway = awayStats.find(s => s.type === type);
+
+                      return (
+                        <StatsRow
+                          key={type}
+                          statHome={statHome}
+                          statAway={statAway}
+                        />
+                      );
+                    });
+                  })()}
+                </View>
               ) : (
                 <Text appearance="hint">Nenhuma estatística disponível.</Text>
               )}
