@@ -1,31 +1,43 @@
 import { Team, Teams } from '@/enums/TeamsEnum';
 import { Autocomplete, AutocompleteItem, Card, Icon, Layout, Text, TopNavigation } from '@ui-kitten/components';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, SafeAreaView, StyleSheet, View } from 'react-native';
 
 export default function Home() {
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const [data, setData] = useState<Team[]>(Teams); // times filtrados
+  const [data, setData] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
-  const filter = useCallback((team: Team, q: string) => {
+  const filter = (team: Team, q: string) => {
     return team.name.toLowerCase().includes(q.toLowerCase());
-  }, []);
+  };
+  
+  useEffect(() => {
+    if (query === '') {
+      setData([]);
+      if (!selectedTeam) {
+        setData(Teams);
+      }
+    } else if (query !== selectedTeam?.name) {
+      setSelectedTeam(null);
+      setData(Teams.filter(team => filter(team, query)));
+    }
+  }, [query, selectedTeam]);
 
   const onSelect = useCallback((index: number) => {
-    const team = data[index];
-    if (team) {
-      setSelectedTeam(team);
-      setQuery(team.name);
+    const selected = data[index];
+    if (selected) {
+      setSelectedTeam(selected);
+      setQuery(selected.name);
+      setData([]);
     }
   }, [data]);
 
-  const onChangeText = useCallback((text: string) => {
+  const onChangeText = (text: string) => {
     setQuery(text);
-    setData(Teams.filter(team => filter(team, text)));
-  }, [filter]);
+  };
 
   const options = selectedTeam ? [
     {
@@ -60,26 +72,29 @@ export default function Home() {
     </Card>
   );
 
+  const renderAutocompleteItem = (item: Team) => (
+    <AutocompleteItem
+      key={item.id}
+      title={item.name}
+    />
+  );
+  
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <Layout style={styles.container}>
-        <TopNavigation alignment="center" title={<Text category="h5">Brubyscore</Text>} />
-
-        <Autocomplete
-          placeholder="Buscar time..."
-          value={query}
-          onSelect={onSelect}
-          onChangeText={onChangeText}
-        >
-          {data.map((team) => (
-            <AutocompleteItem
-              key={team.id}
-              title={team.name}
-            />
-          ))}
-        </Autocomplete>
+        <TopNavigation alignment="center" title="Brubyscore" />
         
-
+        <View>
+          <Autocomplete
+            placeholder="Buscar time..."
+            value={query}
+            onSelect={onSelect}
+            onChangeText={onChangeText}
+          >
+            {data.map(renderAutocompleteItem)}
+          </Autocomplete>
+        </View>
+        
         <FlatList
           data={options}
           renderItem={renderItem}

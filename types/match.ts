@@ -49,6 +49,52 @@ export interface Fixture {
   referee?: string;
 }
 
+export interface GamesStats {
+  minutes: number;
+  number: number;
+  position: string;
+  rating: string;
+  captain: boolean;
+  substitute: boolean;
+}
+
+export interface GoalsStats {
+  total: number | null;
+  conceded: number;
+  assists: number | null;
+  saves: number;
+}
+
+export interface PassesStats {
+  total: number;
+  key: number;
+  accuracy: string;
+}
+
+export interface StatisticsBlock {
+  games: GamesStats;
+  offsides: null;
+  shots: { total: number; on: number };
+  goals: GoalsStats;
+  passes: PassesStats;
+  tackles: { total: number | null; blocks: number; interceptions: number };
+  duels: { total: number | null; won: number | null };
+  dribbles: { attempts: number; success: number; past: number | null };
+  fouls: { drawn: number; committed: number };
+  cards: { yellow: number; red: number };
+  penalty: { won: null; commited: null; scored: number; missed: number; saved: number };
+}
+
+export interface PlayerWithStats {
+  player: Player;
+  statistics: StatisticsBlock[];
+}
+
+export interface TeamPlayerData {
+  team: Team;
+  players: PlayerWithStats[];
+}
+
 export interface Match {
   fixture: Fixture;
   league?: { name: string; season: string; round: string };
@@ -56,25 +102,6 @@ export interface Match {
   goals?: { home: number; away: number };
   events?: Event[];
   lineups?: Lineup[];
-  players?: { team: Team; players: { player: Player }[] }[];
+  players?: TeamPlayerData[];
   statistics?: TeamStatistics[];
 }
-
-export interface PlayerWithStats {
-  player?: {
-    name: string;
-    photo?: string;
-  };
-  statistics: {
-    games: {
-      minutes: number;
-      position: string;
-      rating: string;
-    };
-    goals: {
-      total: number | null;
-      assists: number | null;
-    };
-  }[];
-}
-
