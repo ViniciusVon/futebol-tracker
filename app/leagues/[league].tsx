@@ -1,8 +1,8 @@
 import { useStandings } from '@/hooks/useStandings';
-import { Icon, Layout, Spinner, Text, TopNavigation, TopNavigationAction } from '@ui-kitten/components';
+import { Icon, IndexPath, Layout, Select, SelectItem, Spinner, Text, TopNavigation, TopNavigationAction } from '@ui-kitten/components';
 import { BlurView } from 'expo-blur';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
 
 const BackIcon = (props: any) => <Icon {...props} name="arrow-back" />;
@@ -22,7 +22,12 @@ export default function LeagueDetail() {
     'La Liga': 140,
   };
   const leagueId = leagueMap[league] || 39;
-  const season = 2023;
+
+  const seasons = [2023, 2022, 2021, 2020, 2019, 2018];
+  const [season, setSeason] = useState<number>(2023);
+  const [seasonIndex, setSeasonIndex] = useState<IndexPath | undefined>(
+    new IndexPath(0)
+  );
 
   const { standings, leagueData, loading } = useStandings(leagueId, season);
 
@@ -49,13 +54,27 @@ export default function LeagueDetail() {
         />
 
         <Layout style={{ flex: 1, padding: 16 }}>
+          <Select
+            style={{ marginBottom: 16 }}
+            value={season.toString()}
+            selectedIndex={seasonIndex}
+            onSelect={(index) => {
+              const newIndex = index as IndexPath;
+              setSeasonIndex(newIndex);
+              setSeason(seasons[newIndex.row]);
+            }}
+          >
+            {seasons.map((s) => (
+              <SelectItem key={s} title={s.toString()} />
+            ))}
+          </Select>
+
           {loading ? (
             <Layout style={styles.center}>
               <Spinner size="large" />
             </Layout>
           ) : (
             <>
-              {/* Header da competição */}
               {leagueData && (
                 <BlurView intensity={50} tint="light" style={styles.competitionHeader}>
                   <View style={styles.headerContent}>
@@ -71,14 +90,13 @@ export default function LeagueDetail() {
                 </BlurView>
               )}
 
-              {/* Se não tiver standings */}
               {standings.length === 0 ? (
                 <Text>Nenhum time encontrado para essa liga.</Text>
               ) : (
                 <ScrollView style={{ flex: 1 }}>
                   <ScrollView horizontal>
                     <View style={[styles.table, { minWidth: 700 }]}>
-                      {/* Cabeçalho tabela */}
+                      {/* Cabeçalho da tabela */}
                       <View style={[styles.tableRow, styles.tableHeader]}>
                         <Text style={[styles.cell, { width: 30 }]}>#</Text>
                         <Text style={[styles.cell, { width: 180 }]}>Time</Text>
@@ -92,7 +110,7 @@ export default function LeagueDetail() {
                         <Text style={[styles.cell, { width: 60 }]}>Pts</Text>
                       </View>
 
-                      {/* Linhas */}
+                      {/* Linhas da tabela */}
                       {standings.map((team) => (
                         <View style={styles.tableRow} key={team.team.id}>
                           <Text style={[styles.cell, { width: 30 }]}>{team.rank}</Text>
