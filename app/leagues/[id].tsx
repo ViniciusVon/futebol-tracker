@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     borderRadius: 8, 
     overflow: 'hidden', 
     backgroundColor: '#FFF',
-    minWidth: 700
+    minWidth: 500
   },
   tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#F0F0F0', alignItems: 'center', height: 40 },
   tableHeader: { backgroundColor: '#E4E9F2', height: 35 },
