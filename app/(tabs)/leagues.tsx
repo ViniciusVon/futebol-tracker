@@ -1,23 +1,8 @@
-import { Divider, Icon, Layout, List, ListItem, Text, TopNavigation } from '@ui-kitten/components';
+import { leaguesSections } from '@/enums/LeaguesEnum';
+import { Divider, Icon, Layout, ListItem, Text, TopNavigation } from '@ui-kitten/components';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image, SafeAreaView, StyleSheet, View } from 'react-native';
-
-const leaguesByCountry = {
-  Inglaterra: [
-    { name: 'Premier League', logo: 'https://media.api-sports.io/football/leagues/39.png' },
-  ],
-  França: [
-    { name: 'Ligue 1', logo: 'https://media.api-sports.io/football/leagues/61.png' },
-  ],
-  Alemanha: [
-    { name: 'Bundesliga', logo: 'https://media.api-sports.io/football/leagues/78.png' },
-  ],
-  Espanha: [
-    { name: 'La Liga', logo: 'https://media.api-sports.io/football/leagues/140.png' },
-  ],
-};
-
+import { Image, SafeAreaView, SectionList, StyleSheet, View } from 'react-native';
 
 export default function LeaguesScreen() {
   const router = useRouter();
@@ -30,58 +15,74 @@ export default function LeaguesScreen() {
           title={() => <Text category="h5">Ligas Disponíveis</Text>}
         />
 
-        {Object.entries(leaguesByCountry).map(([country, leagues]) => (
-            <View key={country} style={styles.group}>
-              <Text category="h6" style={styles.countryTitle}>
-                {country}
-              </Text>
-              <List
-                data={leagues}
-                keyExtractor={(item) => item.name}
-                ItemSeparatorComponent={Divider}
-                renderItem={({ item }) => (
-                  <ListItem
-                    title={() => (
-                      <Text category="s1" style={{ fontWeight: '600' }}>
-                        {item.name}
-                      </Text>
-                    )}
-                    accessoryLeft={() => (
-                      <Image source={{ uri: item.logo }} style={styles.logo} />
-                    )}
-                    accessoryRight={() => (
-                      <Icon name="chevron-right-outline" fill="#8F9BB3" style={styles.icon} />
-                    )}
-                    onPress={() =>
-                      router.push(`/leagues/${encodeURIComponent(item.name)}`)
-                    }
-                  />
-                )}
-                style={styles.card}
-              />
-
-            </View>
-        ))}
+        <SectionList
+          sections={leaguesSections}
+          keyExtractor={(item) => item.name}
+          stickySectionHeadersEnabled={false}
+          renderItem={({ item }) => (
+            <ListItem
+              style={styles.listItem}
+              title={() => (
+                <Text category="s1" style={{ fontWeight: '600', color: '#000' }}>
+                  {item.name}
+                </Text>
+              )}
+              accessoryLeft={() => (
+                <Image source={{ uri: item.logo }} style={styles.logo} />
+              )}
+              accessoryRight={() => (
+                <Icon name="chevron-right-outline" fill="#8F9BB3" style={styles.icon} />
+              )}
+              onPress={() =>
+                router.push({
+                  pathname: '/leagues/[id]',
+                  params: { id: item.id, name: item.name },
+                })
+              }
+            />
+          )}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text category="h6" style={styles.countryTitle}>
+              {title}
+            </Text>
+          )}
+          ItemSeparatorComponent={() => <Divider />}
+          renderSectionFooter={() => <View style={styles.sectionFooter} />}
+          style={styles.list}
+        />
       </Layout>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 12 },
-  group: { marginBottom: 24 },
-  countryTitle: { fontWeight: '700', fontSize: 16, marginBottom: 8, color: '#001effff' },
-  card: {
+  container: { flex: 1 },
+  list: { paddingHorizontal: 12 },
+  countryTitle: {
+    fontWeight: '700',
+    fontSize: 16,
+    color: '#ffffffff',
+    paddingHorizontal: 4,
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  listItem: {
     backgroundColor: '#FFF',
-    borderRadius: 12,
-    overflow: 'hidden',
+    color: '#000'
+  },
+  logo: { width: 28, height: 28, resizeMode: 'contain', marginRight: 12 },
+  icon: { width: 20, height: 20 },
+  sectionFooter: {
+    height: 12,
+    backgroundColor: '#FFF',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 2,
-    color: "#000"
+    color: '#000'
   },
-  logo: { width: 28, height: 28, resizeMode: 'contain', marginRight: 8 },
-  icon: { width: 20, height: 20 },
 });
