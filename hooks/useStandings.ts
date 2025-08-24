@@ -1,30 +1,9 @@
 import { api } from '@/services/api';
+import { LeagueData, Standing } from '@/types';
 import { useEffect, useState } from 'react';
 
-interface TeamStanding {
-  rank: number;
-  team: { id: number; name: string; logo: string };
-  points: number;
-  played: number;
-  win: number;
-  draw: number;
-  lose: number;
-  goalsFor: number;
-  goalsAgainst: number;
-  goalDiff: number;
-}
-
-interface LeagueData {
-  id: number;
-  name: string;
-  country: string;
-  logo: string;
-  flag: string;
-  season: number;
-}
-
 export function useStandings(leagueId: number, season: number) {
-  const [standings, setStandings] = useState<TeamStanding[]>([]);
+  const [standings, setStandings] = useState<Standing[][]>([]); 
   const [leagueData, setLeagueData] = useState<LeagueData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -32,28 +11,19 @@ export function useStandings(leagueId: number, season: number) {
     const fetchStandings = async () => {
       try {
         setLoading(true);
-
         const res = await api.get('/standings', {
           params: { league: leagueId, season },
         });
 
         const leagueInfo = res.data.response?.[0]?.league || null;
-        const rawStandings = leagueInfo?.standings?.[0] || [];
+        
+        const rawStandingsGroups = leagueInfo?.standings || [];
 
-        const formattedStandings = rawStandings.map((team: any) => ({
-          rank: team.rank,
-          team: team.team,
-          points: team.points,
-          played: team.all.played,
-          win: team.all.win,
-          draw: team.all.draw,
-          lose: team.all.lose,
-          goalsFor: team.all.goals.for,
-          goalsAgainst: team.all.goals.against,
-          goalDiff: team.goalsDiff,
-        }));
-
-        setStandings(formattedStandings);
+        if (Array.isArray(rawStandingsGroups[0])) {
+            setStandings(rawStandingsGroups);
+        } else {
+            setStandings([rawStandingsGroups]);
+        }
 
         if (leagueInfo) {
           setLeagueData({
@@ -64,13 +34,9 @@ export function useStandings(leagueId: number, season: number) {
             flag: leagueInfo.flag,
             season: leagueInfo.season,
           });
-        } else {
-          setLeagueData(null);
         }
       } catch (err) {
         console.error('Erro ao buscar standings:', err);
-        setStandings([]);
-        setLeagueData(null);
       } finally {
         setLoading(false);
       }
