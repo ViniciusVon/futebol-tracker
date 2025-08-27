@@ -12,7 +12,7 @@ import {
 } from '@ui-kitten/components';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { FlatList, Image, SafeAreaView, StyleSheet } from 'react-native';
+import { FlatList, Image, SafeAreaView, ScrollView, StyleSheet } from 'react-native';
 
 interface TeamDetail {
   team: {
@@ -34,30 +34,193 @@ interface TeamDetail {
   };
 }
 
+type HomeAwayTotal<T> = {
+  home: T;
+  away: T;
+  total: T;
+};
+
+type GameResult = 'V' | 'D' | 'E';
+
+type TimeInterval = 
+  | "0-15" | "16-30" | "31-45" | "46-60" 
+  | "61-75" | "76-90" | "91-105" | "106-120";
+
+type StatsByTimeInterval = {
+  [interval in TimeInterval]?: {
+    total: number | null;
+    percentage: number | null;
+  }
+};
+
+interface LeagueInfo {
+  id: number;
+  name: string;
+  country: string;
+  logo: string;
+  flag: string;
+  season: number;
+}
+
+interface TeamInfo {
+  id: number;
+  name: string;
+  logo: string;
+}
+
+interface FixturesStats {
+  played: HomeAwayTotal<number>;
+  wins: HomeAwayTotal<number>;
+  draws: HomeAwayTotal<number>;
+  loses: HomeAwayTotal<number>;
+}
+
+interface GoalStats {
+  total: HomeAwayTotal<number>;
+  average: HomeAwayTotal<string>;
+  minute: StatsByTimeInterval;
+}
+
+interface PenaltyStats {
+  scored: {
+    total: number;
+    percentage: string;
+  };
+  missed: {
+    total: number;
+    percentage: string;
+  };
+  total: number;
+}
+
+interface Lineup {
+  formation: string;
+  played: number;
+}
+
+interface CardStats {
+  yellow: StatsByTimeInterval;
+  red: StatsByTimeInterval;
+}
+
+interface TeamStatistic {
+  league: LeagueInfo;
+  team: TeamInfo;
+  form: GameResult[];
+  fixtures: FixturesStats;
+  goals: {
+    for: GoalStats;
+    against: GoalStats;
+  };
+  biggest: {
+    streak: {
+      wins: number;
+      draws: number;
+      loses: number;
+    };
+    wins: HomeAwayTotal<string>;
+    loses: HomeAwayTotal<string>;
+    goals: {
+      for: HomeAwayTotal<number>;
+      against: HomeAwayTotal<number>;
+    };
+  };
+  clean_sheet: HomeAwayTotal<number>;
+  failed_to_score: HomeAwayTotal<number>;
+  penalty: PenaltyStats;
+  lineups: Lineup[];
+  cards: CardStats;
+}
+
+const StatisticsContent = ({ stats }: { stats: TeamStatistic }) => (
+  <ScrollView showsVerticalScrollIndicator={false}>
+    <Card style={styles.card} status="basic">
+      <Text category="h6" style={styles.cardTitle}>Desempenho Geral</Text>
+      <Layout style={styles.infoRow}>
+        <Text appearance="hint">Forma:</Text>
+        <Text category="s1">{stats.form.join(' ')}</Text>
+      </Layout>
+      <Layout style={styles.infoRow}>
+        <Text appearance="hint">Total de Jogos:</Text>
+        <Text category="s1">{stats.fixtures.played.total}</Text>
+      </Layout>
+      <Layout style={styles.infoRow}>
+        <Text appearance="hint">Vitórias:</Text>
+        <Text category="s1" status="success">{stats.fixtures.wins.total}</Text>
+      </Layout>
+      <Layout style={styles.infoRow}>
+        <Text appearance="hint">Empates:</Text>
+        <Text category="s1">{stats.fixtures.draws.total}</Text>
+      </Layout>
+      <Layout style={styles.infoRow}>
+        <Text appearance="hint">Derrotas:</Text>
+        <Text category="s1" status="danger">{stats.fixtures.loses.total}</Text>
+      </Layout>
+    </Card>
+
+    <Card style={styles.card} status="basic">
+      <Text category="h6" style={styles.cardTitle}>Gols Marcados</Text>
+      <Layout style={styles.infoRow}>
+        <Text appearance="hint">Total:</Text>
+        <Text category="s1">{stats.goals.for.total.total}</Text>
+      </Layout>
+      <Layout style={styles.infoRow}>
+        <Text appearance="hint">Média por jogo:</Text>
+        <Text category="s1">{stats.goals.for.average}</Text>
+      </Layout>
+    </Card>
+
+     <Card style={styles.card} status="basic">
+      <Text category="h6" style={styles.cardTitle}>Gols Sofridos</Text>
+      <Layout style={styles.infoRow}>
+        <Text appearance="hint">Total:</Text>
+        <Text category="s1">{stats.goals.against.total.total}</Text>
+      </Layout>
+      <Layout style={styles.infoRow}>
+        <Text appearance="hint">Média por jogo:</Text>
+        <Text category="s1">{stats.goals.against.average}</Text>
+      </Layout>
+    </Card>
+  </ScrollView>
+);
+
 export default function TeamsDetail() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, leagueId } = useLocalSearchParams();
   const [teamDetail, setTeamDetail] = useState<TeamDetail | null>(null);
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [statistics, setStatistics] = useState<TeamStatistic | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        const resTeam = await api.get('/teams', { params: { id } });
-        setTeamDetail(resTeam.data.response[0]);
+        const [resTeam, resPlayers, resStats] = await Promise.all([
+          api.get('/teams', { params: { id } }),
+          api.get('/players', { params: { team: id, season: 2023 } }),
+          api.get('/teams/statistics', { params: { team: id, season: 2023, league: leagueId } })
+        ]);
 
-        const resPlayers = await api.get('/players', { params: { team: id, season: 2023 } });
+        setTeamDetail(resTeam.data.response[0]);
         setPlayers(resPlayers.data.response || []);
+
+        const statsData = resStats.data.response;
+        if (statsData) {
+          setStatistics({
+            ...statsData,
+            form: (statsData.form || '').split('') as GameResult[],
+          });
+        }
+        
       } catch (err) {
-        console.error('Erro ao buscar dados do time ou jogadores:', err);
+        console.error('Erro ao buscar dados:', err);
       } finally {
         setLoading(false);
       }
     })();
-  }, [id]);
+  }, [id, leagueId]);
 
   const renderBackAction = () => (
     <TopNavigationAction
@@ -168,6 +331,17 @@ export default function TeamsDetail() {
               />
             </Layout>
           </Tab>
+          <Tab title="Estatísticas">
+            <Layout style={styles.tabContent}>
+              {statistics ? (
+                <StatisticsContent stats={statistics} />
+              ) : (
+                <Layout style={styles.center}>
+                  <Spinner size="large" />
+                </Layout>
+              )}
+            </Layout>
+          </Tab>
         </TabView>
       </Layout>
     </SafeAreaView>
@@ -184,4 +358,10 @@ const styles = StyleSheet.create({
   name: { marginBottom: 12, color: '#222B45', textAlign: 'center' },
   infoRow: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   playerPhoto: { width: 50, height: 50, borderRadius: 25 },
+  cardTitle: {
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF1F7',
+    paddingBottom: 8,
+  }
 });
