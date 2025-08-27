@@ -2,7 +2,10 @@ import { api } from '@/services/api';
 import {
   Card,
   Icon,
+  IndexPath,
   Layout,
+  Select,
+  SelectItem,
   Spinner,
   Tab,
   TabView,
@@ -11,7 +14,7 @@ import {
   TopNavigationAction,
 } from '@ui-kitten/components';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, Image, SafeAreaView, ScrollView, StyleSheet } from 'react-native';
 
 interface TeamDetail {
@@ -142,19 +145,19 @@ const StatisticsContent = ({ stats }: { stats: TeamStatistic }) => (
       </Layout>
       <Layout style={styles.infoRow}>
         <Text appearance="hint">Total de Jogos:</Text>
-        <Text category="s1">{stats.fixtures.played.total}</Text>
+        <Text category="s1">{stats.fixtures?.played.total}</Text>
       </Layout>
       <Layout style={styles.infoRow}>
         <Text appearance="hint">Vitórias:</Text>
-        <Text category="s1" status="success">{stats.fixtures.wins.total}</Text>
+        <Text category="s1" status="success">{stats.fixtures?.wins.total}</Text>
       </Layout>
       <Layout style={styles.infoRow}>
         <Text appearance="hint">Empates:</Text>
-        <Text category="s1">{stats.fixtures.draws.total}</Text>
+        <Text category="s1">{stats.fixtures?.draws.total}</Text>
       </Layout>
       <Layout style={styles.infoRow}>
         <Text appearance="hint">Derrotas:</Text>
-        <Text category="s1" status="danger">{stats.fixtures.loses.total}</Text>
+        <Text category="s1" status="danger">{stats.fixtures?.loses.total}</Text>
       </Layout>
     </Card>
 
@@ -162,11 +165,11 @@ const StatisticsContent = ({ stats }: { stats: TeamStatistic }) => (
       <Text category="h6" style={styles.cardTitle}>Gols Marcados</Text>
       <Layout style={styles.infoRow}>
         <Text appearance="hint">Total:</Text>
-        <Text category="s1">{stats.goals.for.total.total}</Text>
+        <Text category="s1">{stats.goals?.for.total.total}</Text>
       </Layout>
       <Layout style={styles.infoRow}>
         <Text appearance="hint">Média por jogo:</Text>
-        <Text category="s1">{stats.goals.for.average}</Text>
+        <Text category="s1">{stats.goals?.for.average}</Text>
       </Layout>
     </Card>
 
@@ -174,11 +177,11 @@ const StatisticsContent = ({ stats }: { stats: TeamStatistic }) => (
       <Text category="h6" style={styles.cardTitle}>Gols Sofridos</Text>
       <Layout style={styles.infoRow}>
         <Text appearance="hint">Total:</Text>
-        <Text category="s1">{stats.goals.against.total.total}</Text>
+        <Text category="s1">{stats.goals?.against.total.total}</Text>
       </Layout>
       <Layout style={styles.infoRow}>
         <Text appearance="hint">Média por jogo:</Text>
-        <Text category="s1">{stats.goals.against.average}</Text>
+        <Text category="s1">{stats.goals?.against.average}</Text>
       </Layout>
     </Card>
   </ScrollView>
@@ -192,26 +195,31 @@ export default function TeamsDetail() {
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [statistics, setStatistics] = useState<TeamStatistic | null>(null);
+  const [isStatsLoading, setIsStatsLoading] = useState(false);
+  const [availableLeagues, setAvailableLeagues] = useState<LeagueInfo[]>([]);
+  const [selectedLeague, setSelectedLeague] = useState<IndexPath | undefined>(undefined);
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        const [resTeam, resPlayers, resStats] = await Promise.all([
+        const [resTeam, resPlayers, resLeagues] = await Promise.all([
           api.get('/teams', { params: { id } }),
           api.get('/players', { params: { team: id, season: 2023 } }),
-          api.get('/teams/statistics', { params: { team: id, season: 2023, league: leagueId } })
+          api.get('/leagues', { params: { team: id, season: 2023 } })
         ]);
 
         setTeamDetail(resTeam.data.response[0]);
         setPlayers(resPlayers.data.response || []);
+        
+        const leaguesData = resLeagues.data.response.map((item: { league: LeagueInfo }) => item.league);
+        setAvailableLeagues(leaguesData);
 
-        const statsData = resStats.data.response;
-        if (statsData) {
-          setStatistics({
-            ...statsData,
-            form: (statsData.form || '').split('') as GameResult[],
-          });
+        if (leagueId && leaguesData.length > 0) {
+          const initialIndex = leaguesData.findIndex((l: LeagueInfo) => l.id === Number(leagueId));
+          if (initialIndex !== -1) {
+            setSelectedLeague(new IndexPath(initialIndex));
+          }
         }
         
       } catch (err) {
@@ -221,6 +229,44 @@ export default function TeamsDetail() {
       }
     })();
   }, [id, leagueId]);
+
+  const fetchStatistics = useCallback(async () => {
+    if (!selectedLeague || availableLeagues.length === 0) {
+      setStatistics(null);
+      return;
+    }
+
+    try {
+      setIsStatsLoading(true);
+      setStatistics(null);
+
+      const selectedLeagueId = availableLeagues[selectedLeague.row].id;
+      
+      const resStats = await api.get('/teams/statistics', { 
+        params: { team: id, season: 2023, league: selectedLeagueId } 
+      });
+
+      const statsData = resStats.data.response;
+      if (statsData) {
+        setStatistics({
+          ...statsData,
+          form: (statsData.form || '').split('') as GameResult[],
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao buscar estatísticas:', err);
+    } finally {
+      setIsStatsLoading(false);
+    }
+  }, [id, selectedLeague, availableLeagues]);
+
+  useEffect(() => {
+    fetchStatistics();
+  }, [fetchStatistics]);
+
+  const handleLeagueSelect = useCallback((index: IndexPath | IndexPath[]) => {
+    setSelectedLeague(index as IndexPath);
+  }, []);
 
   const renderBackAction = () => (
     <TopNavigationAction
@@ -331,13 +377,41 @@ export default function TeamsDetail() {
               />
             </Layout>
           </Tab>
+          {/*Tab de Estatísticas*/}
           <Tab title="Estatísticas">
             <Layout style={styles.tabContent}>
-              {statistics ? (
+              <Select
+                style={{ marginBottom: 16 }}
+                placeholder="Selecione uma liga"
+                value={selectedLeague ? availableLeagues[selectedLeague.row].name : ''}
+                selectedIndex={selectedLeague}
+                onSelect={handleLeagueSelect}
+              >
+                {availableLeagues.map((league) => (
+                  <SelectItem
+                    key={league.id}
+                    title={league.name}
+                    accessoryLeft={(props) => (
+                      <Image
+                        style={[props?.style, styles.leagueLogoInSelect]}
+                        source={{ uri: league.logo }}
+                      />
+                    )}
+                  />
+                ))}
+              </Select>
+              
+              {isStatsLoading ? (
+                <Layout style={styles.center}>
+                  <Spinner size="large" />
+                </Layout>
+              ) : statistics ? (
                 <StatisticsContent stats={statistics} />
               ) : (
                 <Layout style={styles.center}>
-                  <Spinner size="large" />
+                  <Text appearance="hint">
+                    Selecione uma liga para ver as estatísticas.
+                  </Text>
                 </Layout>
               )}
             </Layout>
@@ -363,5 +437,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#EDF1F7',
     paddingBottom: 8,
+  },
+  leagueLogoInSelect: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
   }
 });
